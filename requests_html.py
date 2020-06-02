@@ -702,7 +702,6 @@ class HTML(BaseParser):
 
                     content, result, page = await self._async_render(url=self.url, script=script, sleep=sleep, wait=wait, content=self.html, reload=reload, scrolldown=scrolldown, timeout=timeout, wait_until=wait_until, keep_page=keep_page, cookies=cookies)
                 except TypeError:
-                    print("TEST")
                     pass
             else:
                 break
