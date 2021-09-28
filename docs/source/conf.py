@@ -18,10 +18,10 @@
 
 
 # -- Project information -----------------------------------------------------
-import requests_html
+import httpx_html
 
-project = 'requests-HTML'
-copyright = u'MMXVIII. A <a href="http://kennethreitz.com/pages/open-projects.html">Kenneth Reitz</a> Project'
+project = 'httpx-HTML'
+copyright = u'MMXVIII. A <a href="http://kennethreitz.com/pages/open-projects.html">Kenneth Reitz</a> Project'  # noqa
 author = 'Kenneth Reitz'
 
 # The short X.Y version

@@ -1,7 +1,8 @@
 import pytest
-from requests_html import HTMLSession, AsyncHTMLSession, HTMLResponse
+from httpx_html import HTMLSession, AsyncHTMLSession, HTMLResponse
 
 session = HTMLSession()
+
 
 @pytest.mark.internet
 def test_pagination():
@@ -14,6 +15,7 @@ def test_pagination():
     for page in pages:
         r = session.get(page)
         assert next(r.html)
+
 
 @pytest.mark.internet
 @pytest.mark.asyncio
@@ -28,6 +30,7 @@ async def test_async_pagination(event_loop):
     for page in pages:
         r = await asession.get(page)
         assert await r.html.__anext__()
+
 
 @pytest.mark.internet
 def test_async_run():
@@ -46,6 +49,7 @@ def test_async_run():
 
     assert len(r) == 3
     assert isinstance(r[0], HTMLResponse)
+
 
 def test_wait_until(event_loop):
     session = HTMLSession()
