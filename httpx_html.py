@@ -4,7 +4,7 @@ from urllib.parse import urlparse, urlunparse, urljoin
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures._base import TimeoutError
 from functools import partial
-from typing import Set, Union, List, MutableMapping, Optional
+from typing import Set, Union, List, MutableMapping, Mapping, Optional, NewType
 
 import pyppeteer
 import httpx
@@ -24,29 +24,16 @@ from w3lib.encoding import html_to_unicode
 
 __version__ = 0, 11, 0, 'dev0'
 
-DEFAULT_ENCODING = 'utf-8'
-DEFAULT_URL = 'https://example.org/'
-DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8'  # noqa
-DEFAULT_NEXT_SYMBOL = ['next', 'more', 'older']
-
-cleaner = Cleaner()
-cleaner.javascript = True
-cleaner.style = True
-
-useragent = None
-
-# Typing.
+# Typing
 _Find = Union[List['Element'], 'Element']
 _XPath = Union[List[str], List['Element'], str, 'Element']
 _Result = Union[List['Result'], 'Result']
 _Html = Union[str, bytes]
-_BaseHTML = str
-_UserAgent = str
-_DefaultEncoding = str
-_Url = str
-_RawHTML = bytes
-_Encoding = str
-_Text = str
+_BaseHtml = NewType('_BaseHtml', str)
+_UserAgent = NewType('_UserAgent', str)
+_Url = NewType('_Url', str)
+_Encoding = NewType('_Encoding', str)
+_Text = NewType('_Text', str)
 _Search = Result
 _Containing = Union[str, List[str]]
 _Links = Set[str]
@@ -59,6 +46,18 @@ try:
     assert sys.version_info > (3, 5)
 except AssertionError:
     raise RuntimeError('httpx-HTML requires Python 3.6+!')
+
+
+DEFAULT_ENCODING = 'utf-8'
+DEFAULT_URL = 'https://example.org/'
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8'  # noqa
+DEFAULT_NEXT_SYMBOL = ['next', 'more', 'older']
+
+cleaner = Cleaner()
+cleaner.javascript = True
+cleaner.style = True
+
+useragent = None
 
 
 class MaxRetries(Exception):
@@ -79,7 +78,7 @@ class BaseParser:
     def __init__(
         self,
         *, element,
-        default_encoding: _DefaultEncoding = None,
+        default_encoding: Optional[str] = None,
         html:             _Html = None,
         url:              _Url,
     ) -> None:
@@ -93,7 +92,7 @@ class BaseParser:
         self._pq = None
 
     @property
-    def raw_html(self) -> _RawHTML:
+    def raw_html(self) -> bytes:
         '''Bytes representation of the HTML content.
         (`learn more <http://www.diveintopython3.net/strings.html>`_).
         '''
@@ -103,7 +102,7 @@ class BaseParser:
             return etree.tostring(self.element, encoding='unicode').strip().encode(self.encoding)
 
     @property
-    def html(self) -> _BaseHTML:
+    def html(self) -> str:
         '''Unicode representation of the HTML content
         (`learn more <http://www.diveintopython3.net/strings.html>`_).
         '''
@@ -275,9 +274,9 @@ class BaseParser:
             Element(element=selection, url=self.url, default_encoding=_encoding or self.encoding)
             if not isinstance(selection, etree._ElementUnicodeResult) else str(selection)
             for selection in selected
-        ]
+        ]  # type: List[Element]
 
-        # Sanitize the found HTML.
+        # Sanitize the found HTML
         if clean:
             elements_copy = elements.copy()
             elements = []
@@ -391,7 +390,7 @@ class Element(BaseParser):
         '_html', '_lxml', '_pq', '_attrs', 'session',
     )
 
-    def __init__(self, *, element, url: _Url, default_encoding: _DefaultEncoding = None) -> None:
+    def __init__(self, *, element, url: _Url, default_encoding: Optional[str] = None) -> None:
         super().__init__(element=element, url=url, default_encoding=default_encoding)
         self.element = element
         self.tag = element.tag
@@ -399,8 +398,8 @@ class Element(BaseParser):
         self._attrs = None
 
     def __repr__(self) -> str:
-        attrs = ['{}={}'.format(attr, repr(self.attrs[attr])) for attr in self.attrs]
-        return "<Element {} {}>".format(repr(self.element.tag), ' '.join(attrs))
+        attrs = [f'{a}={self.attrs[a]!r}' for a in self.attrs]
+        return f'<Element {self.element.tag!r} {" ".join(attrs)}>'
 
     @property
     def attrs(self) -> _Attrs:
@@ -428,10 +427,10 @@ class HTML(BaseParser):
 
     def __init__(
         self,
-        *, session:       Union['HTMLSession', 'AsyncHTMLSession'] = None,
+        *, session:       Optional['BaseSession'] = None,
         url:              str = DEFAULT_URL,
         html:             _Html,
-        default_encoding: str = DEFAULT_ENCODING,
+        default_encoding: Optional[str] = DEFAULT_ENCODING,
         async_:           bool = False,
     ) -> None:
 
@@ -453,7 +452,11 @@ class HTML(BaseParser):
     def __repr__(self) -> str:
         return f'<HTML url={self.url!r}>'
 
-    def next(self, fetch: bool = False, next_symbol: _NextSymbol = DEFAULT_NEXT_SYMBOL) -> _Next:
+    def next(
+        self,
+        fetch:       bool = False,
+        next_symbol: _NextSymbol = DEFAULT_NEXT_SYMBOL
+    ) -> Optional[_Next]:
         '''Attempts to find the next page, if there is one. If ``fetch``
         is ``True`` (default), returns :class:`HTML <HTML>` object of
         next page. If ``fetch`` is ``False``, simply returns the next URL.
@@ -532,7 +535,7 @@ class HTML(BaseParser):
         reload,
         content:    Optional[str],
         timeout:    Union[float, int],
-        wait_until: Union[str, List[str]],
+        wait_until: Optional[Union[str, List[str]]],
         keep_page:  bool,
         cookies:    list = [{}],
     ):
@@ -587,7 +590,10 @@ class HTML(BaseParser):
             page = None
             return None
 
-    def _convert_cookiejar_to_render(self, session_cookiejar):
+    def _convert_cookiejar_to_render(
+        self,
+        session_cookiejar,
+    ) -> MutableMapping[str, http.cookiejar.CookieJar]:
         '''
         Convert HTMLSession.cookies:cookiejar[] for browser.newPage().setCookie
         '''
@@ -609,7 +615,7 @@ class HTML(BaseParser):
 
         def __convert(cookiejar, key):
             try:
-                v = eval("cookiejar."+key)
+                v = eval('cookiejar.' + key)
                 kv = '' if not v else {key: v}
             except Exception:
                 kv = ''
@@ -634,7 +640,7 @@ class HTML(BaseParser):
         '''Convert HTMLSession.cookies for browser.newPage().setCookie
         Return a list of dict
         '''
-        cookies_render = []
+        cookies_render: List[MutableMapping[str, http.cookiejar.CookieJar]] = []
         if isinstance(self.session.cookies, http.cookiejar.CookieJar):
             for cookie in self.session.cookies:
                 cookies_render.append(self._convert_cookiejar_to_render(cookie))
@@ -802,10 +808,10 @@ class HTMLResponse(httpx.Response):
     def __init__(
         self,
         status_code: int,
-        session:     Union['HTMLSession', 'AsyncHTMLSession'],
+        session:     'BaseSession',
     ) -> None:
         super().__init__(status_code)
-        self._html = None  # type: HTML
+        self._html = None  # type: Optional[HTML]
         self.session = session
 
     @property
@@ -819,17 +825,18 @@ class HTMLResponse(httpx.Response):
         return self._html
 
     @classmethod
-    def _from_response(cls, response, session: Union['HTMLSession', 'AsyncHTMLSession']):
+    def _from_response(cls, response, session: 'BaseSession'):
         html_r = cls(status_code=response.status_code, session=session)
         html_r.__dict__.update(response.__dict__)
         return html_r
 
 
-def user_agent(style=None) -> _UserAgent:
+def user_agent(style: Optional[Mapping] = None) -> _UserAgent:
     '''Returns an apparently legit user-agent, if not requested one of a specific
     style. Defaults to a Chrome-style User-Agent.
     '''
     global useragent
+
     if not useragent and style:
         useragent = UserAgent()
 
