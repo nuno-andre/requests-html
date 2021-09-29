@@ -40,6 +40,7 @@ _Links = Set[str]
 _Attrs = MutableMapping
 _Next = Union['HTML', List[str]]
 _NextSymbol = List[str]
+_CookieRender = MutableMapping[str, http.cookiejar.CookieJar]
 
 # Sanity checking.
 try:
@@ -154,7 +155,7 @@ class BaseParser:
 
     @property
     def lxml(self) -> HtmlElement:
-        '''`lxml <http://lxml.de>`_ representation of the
+        '''`lxml <https://lxml.de>`_ representation of the
         :class:`Element <Element>` or :class:`HTML <HTML>`.
         '''
         if self._lxml is None:
@@ -593,7 +594,7 @@ class HTML(BaseParser):
     def _convert_cookiejar_to_render(
         self,
         session_cookiejar,
-    ) -> MutableMapping[str, http.cookiejar.CookieJar]:
+    ) -> _CookieRender:
         '''
         Convert HTMLSession.cookies:cookiejar[] for browser.newPage().setCookie
         '''
@@ -636,15 +637,13 @@ class HTML(BaseParser):
             cookie_render.update(__convert(session_cookiejar, key))
         return cookie_render
 
-    def _convert_cookiesjar_to_render(self) -> List[MutableMapping]:
-        '''Convert HTMLSession.cookies for browser.newPage().setCookie
-        Return a list of dict
+    def _convert_cookiesjar_to_render(self) -> List[_CookieRender]:
+        '''Convert ``HTMLSession.cookies`` for ``browser.newPage().setCookie``.
         '''
-        cookies_render: List[MutableMapping[str, http.cookiejar.CookieJar]] = []
         if isinstance(self.session.cookies, http.cookiejar.CookieJar):
-            for cookie in self.session.cookies:
-                cookies_render.append(self._convert_cookiejar_to_render(cookie))
-        return cookies_render
+            return [self._convert_cookiejar_to_render(c) for c in self.session.cookies]
+
+        return []
 
     def render(
         self,
@@ -863,11 +862,11 @@ class BaseSession(httpx.Client):
         *, mock_browser: bool = True,
         verify:          bool = True,
         browser_args:    list = ['--no-sandbox'],
-        proxies=None,
+        proxies=None,  # TODO: fix proxies format
     ):
         super().__init__()
 
-        # Mock a web browser's user agent.
+        # mock a web browser's user agent
         if mock_browser:
             self.headers['User-Agent'] = user_agent()
 
@@ -893,9 +892,6 @@ class BaseSession(httpx.Client):
 
 
 class HTMLSession(BaseSession):
-
-    # def __init__(self, **kwargs):
-    #     super().__init__(**kwargs)
 
     @property
     def browser(self):

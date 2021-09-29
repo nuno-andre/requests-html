@@ -1,31 +1,31 @@
-import os
 from functools import partial
+from pathlib import Path
 
 import pytest
 from pyppeteer.browser import Browser
 # from pyppeteer.page import Page
 from httpx_html import HTMLSession, AsyncHTMLSession, HTML
 from requests_file import FileAdapter
+import httpx_file
 
 session = HTMLSession()
-session.mount('file://', FileAdapter())
+session.mount = httpx_file.Client.mount
+session.mount(session, 'file://', httpx_file.FileTransport())
 
 
 def get():
-    path = os.path.sep.join((os.path.dirname(os.path.abspath(__file__)), 'python.html'))
-    url = 'file://{}'.format(path)
+    url = Path(__file__).with_name('python.html').as_uri()
 
     return session.get(url)
 
 
 @pytest.fixture
 def async_get(event_loop):
-    """ AsyncSession cannot be created global since it will create
-        a different loop from pytest-asyncio. """
+    '''AsyncSession cannot be created global since it will create
+    a different loop from pytest-asyncio.'''
     async_session = AsyncHTMLSession()
     async_session.mount('file://', FileAdapter())
-    path = os.path.sep.join((os.path.dirname(os.path.abspath(__file__)), 'python.html'))
-    url = 'file://{}'.format(path)
+    url = Path(__file__).with_name('python.html').as_uri()
 
     return partial(async_session.get, url)
 
@@ -55,7 +55,7 @@ def test_css_selector():
 
     for menu_item in (
         'About', 'Applications', 'Quotes', 'Getting Started', 'Help',
-        'Python Brochure'
+        'Python Brochure',
     ):
         assert menu_item in about.text.split('\n')
         assert menu_item in about.full_text.split('\n')
@@ -112,7 +112,7 @@ def test_xpath():
 
 
 def test_html_loading():
-    doc = """<a href='https://httpbin.org'>"""
+    doc = "<a href='https://httpbin.org'>"
     html = HTML(html=doc)
 
     assert 'https://httpbin.org' in html.links
@@ -137,8 +137,8 @@ def test_anchor_links():
     ('http://example.com/', '//xkcd.com/about/', 'http://xkcd.com/about/'),
 ])
 def test_absolute_links(url, link, expected):
-    head_template = """<head><base href='{}'></head>"""
-    body_template = """<body><a href='{}'>Next</a></body>"""
+    head_template = "<head><base href='{}'></head>"
+    body_template = "<body><a href='{}'>Next</a></body>"
 
     # Test without `<base>` tag (url is base)
     html = HTML(html=body_template.format(link), url=url)
@@ -152,7 +152,7 @@ def test_absolute_links(url, link, expected):
 
 
 def test_parser():
-    doc = """<a href='https://httpbin.org'>httpbin.org\n</a>"""
+    doc = "<a href='https://httpbin.org'>httpbin.org\n</a>"
     html = HTML(html=doc)
 
     assert html.find('html')
@@ -203,7 +203,7 @@ async def test_async_render(async_get):
 
 @pytest.mark.render
 def test_bare_render():
-    doc = """<a href='https://httpbin.org'>"""
+    doc = "<a href='https://httpbin.org'>"
     html = HTML(html=doc)
     script = """
         () => {
@@ -225,7 +225,7 @@ def test_bare_render():
 @pytest.mark.render
 @pytest.mark.asyncio
 async def test_bare_arender():
-    doc = """<a href='https://httpbin.org'>"""
+    doc = "<a href='https://httpbin.org'>"
     html = HTML(html=doc, async_=True)
     script = """
         () => {
@@ -290,9 +290,11 @@ async def test_bare_js_async_eval():
 
 
 def test_browser_session():
-    """ Test browser instaces is created and properly close when session is closed.
-        Note: session.close method need to be tested together with browser creation,
-            since no doing that will left the browser running. """
+    '''Test browser instaces is created and properly close when session is closed.
+
+    Note: session.close method need to be tested together with browser creation,
+    since no doing that will left the browser running.
+    '''
     session = HTMLSession()
     assert isinstance(session.browser, Browser)
     assert hasattr(session, "loop") is True
@@ -302,7 +304,8 @@ def test_browser_session():
 
 @pytest.mark.asyncio
 async def test_browser_session_fail():
-    """ HTMLSession.browser should not be call within an existing event loop> """
+    '''HTMLSession.browser should not be call within an existing event loop>
+    '''
     session = HTMLSession()
     with pytest.raises(RuntimeError):
         session.browser
