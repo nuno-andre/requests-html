@@ -76,6 +76,9 @@ class BaseParser:
     :param url: The URL from which the HTML originated, used for ``absolute_links``.
     '''
 
+    __slots__ = ('element', 'url', 'skip_anchors', 'default_encoding',
+                 '_encoding', '_html', '_lxml', '_pq')
+
     def __init__(
         self,
         *, element,
@@ -95,17 +98,19 @@ class BaseParser:
     @property
     def raw_html(self) -> bytes:
         '''Bytes representation of the HTML content.
-        (`learn more <http://www.diveintopython3.net/strings.html>`_).
         '''
         if self._html:
             return self._html
         else:
             return etree.tostring(self.element, encoding='unicode').strip().encode(self.encoding)
 
+    @raw_html.setter
+    def raw_html(self, html: bytes) -> None:
+        self._html = html
+
     @property
     def html(self) -> str:
         '''Unicode representation of the HTML content
-        (`learn more <http://www.diveintopython3.net/strings.html>`_).
         '''
         if self._html:
             return self.raw_html.decode(self.encoding, errors='replace')
@@ -116,21 +121,15 @@ class BaseParser:
     def html(self, html: str) -> None:
         self._html = html.encode(self.encoding)
 
-    @raw_html.setter
-    def raw_html(self, html: bytes) -> None:
-        '''Property setter for self.html.
-        '''
-        self._html = html
-
     @property
     def encoding(self) -> _Encoding:
         '''The encoding string to be used, extracted from the HTML and
         :class:`HTMLResponse <HTMLResponse>` headers.
         '''
-        # Scan meta tags for charset.
+        # scan meta tags for charset
         if not self._encoding and self._html:
             self._encoding = html_to_unicode(self.default_encoding, self._html)[0]
-            # Fall back to httpx' detected encoding if decode fails.
+            # fall back to httpx's detected encoding if decode fails
             try:
                 self.raw_html.decode(self.encoding, errors='replace')
             except UnicodeDecodeError:
@@ -140,12 +139,11 @@ class BaseParser:
 
     @encoding.setter
     def encoding(self, enc: str) -> None:
-        '''Property setter for self.encoding.'''
         self._encoding = enc
 
     @property
     def pq(self) -> PyQuery:
-        '''`PyQuery <https://pythonhosted.org/pyquery/>`_ representation
+        '''`PyQuery <https://github.com/gawel/pyquery/>`_ representation
         of the :class:`Element <Element>` or :class:`HTML <HTML>`.
         '''
         if self._pq is None:
@@ -358,20 +356,20 @@ class BaseParser:
         '''The base URL for the page. Supports the ``<base>`` tag
         (`learn more <https://www.w3schools.com/tags/tag_base.asp>`_).'''
 
-        # Support for <base> tag.
+        # support for <base> tag
         base = self.find('base', first=True)
         if base:
             result = base.attrs.get('href', '').strip()
             if result:
                 return result
 
-        # Parse the url to separate out the path
+        # parse the url to separate out the path
         parsed = urlparse(self.url)._asdict()
 
-        # Remove any part of the path after the last '/'
+        # remove any part of the path after the last '/'
         parsed['path'] = '/'.join(parsed['path'].split('/')[:-1]) + '/'
 
-        # Reconstruct the url with the modified path
+        # reconstruct the url with the modified path
         parsed = (v for v in parsed.values())
         url = urlunparse(parsed)
 
@@ -386,10 +384,7 @@ class Element(BaseParser):
     :param default_encoding: Which encoding to default to.
     '''
 
-    __slots__ = (
-        'element', 'url', 'skip_anchors', 'default_encoding', '_encoding',
-        '_html', '_lxml', '_pq', '_attrs', 'session',
-    )
+    __slots__ = 'tag', 'lineno', '_attrs'  # , 'session'
 
     def __init__(self, *, element, url: _Url, default_encoding: Optional[str] = None) -> None:
         super().__init__(element=element, url=url, default_encoding=default_encoding)
@@ -410,7 +405,7 @@ class Element(BaseParser):
         if self._attrs is None:
             self._attrs = {k: v for k, v in self.element.items()}
 
-            # Split class and rel up, as there are usually many of them:
+            # split class and rel up, as there are usually many of them
             for attr in ['class', 'rel']:
                 if attr in self._attrs:
                     self._attrs[attr] = tuple(self._attrs[attr].split())
@@ -426,6 +421,8 @@ class HTML(BaseParser):
     :param default_encoding: Which encoding to default to.
     '''
 
+    __slots__ = 'session', 'page', 'next_symbol'
+
     def __init__(
         self,
         *, session:       Optional['BaseSession'] = None,
@@ -435,7 +432,7 @@ class HTML(BaseParser):
         async_:           bool = False,
     ) -> None:
 
-        # Convert incoming unicode HTML into bytes.
+        # convert incoming unicode HTML into bytes
         if isinstance(html, str):
             html = html.encode(DEFAULT_ENCODING)
 
@@ -481,7 +478,7 @@ class HTML(BaseParser):
                         return candidate.attrs['href']
 
             try:
-                # Resort to the last candidate.
+                # resort to the last candidate
                 return candidates[-1].attrs['href']
             except IndexError:
                 return None
@@ -545,7 +542,7 @@ class HTML(BaseParser):
         try:
             page = await self.browser.newPage()
 
-            # Wait before rendering the page, to prevent timeouts.
+            # wait before rendering the page, to prevent timeouts
             await asyncio.sleep(wait)
 
             if 'User-Agent' in self.session.headers:
@@ -560,7 +557,7 @@ class HTML(BaseParser):
             if wait_until is not None:
                 options['waitUntil'] = wait_until
 
-            # Load the given page (GET request, obviously.)
+            # load the given page (GET request, obviously)
             if reload:
                 await page.goto(url, options=options)
             else:
@@ -616,7 +613,7 @@ class HTML(BaseParser):
 
         def __convert(cookiejar, key):
             try:
-                v = eval('cookiejar.' + key)
+                v = eval(f'cookiejar.{key}')
                 kv = '' if not v else {key: v}
             except Exception:
                 kv = ''
@@ -715,7 +712,7 @@ class HTML(BaseParser):
         self.browser = self.session.browser  # Automatically create a event loop and browser
         content = None
 
-        # Automatically set Reload to False, if example URL is being used.
+        # automatically set reload to False, if example URL is being used
         if self.url == DEFAULT_URL:
             reload = False
 
@@ -767,7 +764,7 @@ class HTML(BaseParser):
         self.browser = await self.session.browser
         content = None
 
-        # Automatically set Reload to False, if example URL is being used.
+        # automatically set Reload to False, if example URL is being used
         if self.url == DEFAULT_URL:
             reload = False
 

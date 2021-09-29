@@ -7,12 +7,12 @@ possible.
 When using this library you automatically get:
 
 - **Full JavaScript support**!
-- *CSS Selectors* (a.k.a jQuery-style, thanks to PyQuery).
+- *CSS Selectors* (a.k.a jQuery-style, thanks to `PyQuery <https://github.com/gawel/pyquery/>`_).
 - *XPath Selectors*, for the faint of heart.
 - Mocked user-agent (like a real web browser).
 - Automatic following of redirects.
 - Connection–pooling and cookie persistence.
-- The httpx experience you know and love, with magical parsing abilities.
+- The `httpx <https://github.com/encode/httpx>`_ experience you know and love, with magical parsing abilities.
 - **Async Support**
 
 .. Other nice features include:
