@@ -1,17 +1,11 @@
-import sys
 import asyncio
 from urllib.parse import urlparse, urlunparse, urljoin
-from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures._base import TimeoutError
-from functools import partial
-from typing import Set, Union, List, MutableMapping, Mapping, Optional, NewType
+from typing import Set, Union, List, MutableMapping, Optional, NewType, TYPE_CHECKING
 
-import pyppeteer
-import httpx
 import http.cookiejar
 from pyquery import PyQuery
 
-from fake_useragent import UserAgent
 from lxml.html.clean import Cleaner
 import lxml
 from lxml import etree
@@ -22,43 +16,30 @@ from parse import search as parse_search
 from parse import findall, Result
 from w3lib.encoding import html_to_unicode
 
-__version__ = 0, 11, 0, 'dev0'
+if TYPE_CHECKING:
+    from .session import BaseSession
 
-# Typing
-_Find = Union[List['Element'], 'Element']
-_XPath = Union[List[str], List['Element'], str, 'Element']
-_Result = Union[List['Result'], 'Result']
-_Html = Union[str, bytes]
-_BaseHtml = NewType('_BaseHtml', str)
-_UserAgent = NewType('_UserAgent', str)
-_Url = NewType('_Url', str)
-_Encoding = NewType('_Encoding', str)
-_Text = NewType('_Text', str)
-_Search = Result
-_Containing = Union[str, List[str]]
-_Links = Set[str]
-_Attrs = MutableMapping
-_Next = Union['HTML', List[str]]
-_NextSymbol = List[str]
-_CookieRender = MutableMapping[str, http.cookiejar.CookieJar]
-
-# Sanity checking.
-try:
-    assert sys.version_info > (3, 5)
-except AssertionError:
-    raise RuntimeError('httpx-HTML requires Python 3.6+!')
-
+    _Attrs = MutableMapping
+    _Containing = Union[str, List[str]]
+    _CookieRender = MutableMapping[str, http.cookiejar.CookieJar]
+    _Encoding = NewType('_Encoding', str)
+    _Find = Union[List['Element'], 'Element']
+    _Html = Union[str, bytes]
+    _Links = Set[str]
+    _Next = Union['HTML', List[str]]
+    _NextSymbol = List[str]
+    _Result = Union[List['Result'], 'Result']
+    _Text = NewType('_Text', str)
+    _Url = NewType('_Url', str)
+    _XPath = Union[List[str], List['Element'], str, 'Element']
 
 DEFAULT_ENCODING = 'utf-8'
 DEFAULT_URL = 'https://example.org/'
-DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8'  # noqa
 DEFAULT_NEXT_SYMBOL = ['next', 'more', 'older']
 
 cleaner = Cleaner()
 cleaner.javascript = True
 cleaner.style = True
-
-useragent = None
 
 
 class MaxRetries(Exception):
@@ -83,8 +64,8 @@ class BaseParser:
         self,
         *, element,
         default_encoding: Optional[str] = None,
-        html:             _Html = None,
-        url:              _Url,
+        html:             '_Html' = None,
+        url:              '_Url',
     ) -> None:
         self.element = element
         self.url = url
@@ -122,7 +103,7 @@ class BaseParser:
         self._html = html.encode(self.encoding)
 
     @property
-    def encoding(self) -> _Encoding:
+    def encoding(self) -> '_Encoding':
         '''The encoding string to be used, extracted from the HTML and
         :class:`HTMLResponse <HTMLResponse>` headers.
         '''
@@ -165,13 +146,13 @@ class BaseParser:
         return self._lxml
 
     @property
-    def text(self) -> _Text:
+    def text(self) -> '_Text':
         '''The text content of the :class:`Element <Element>` or :class:`HTML <HTML>`.
         '''
         return self.pq.text()
 
     @property
-    def full_text(self) -> _Text:
+    def full_text(self) -> '_Text':
         '''The full text content (including links) of the :class:`Element <Element>`
         or :class:`HTML <HTML>`.
         '''
@@ -180,11 +161,11 @@ class BaseParser:
     def find(
         self,
         selector:      str = "*",
-        *, containing: _Containing = None,
+        *, containing: '_Containing' = None,
         clean:         bool = False,
         first:         bool = False,
         _encoding:     str = None
-    ) -> _Find:
+    ) -> '_Find':
         '''Given a CSS Selector, returns a list of :class:`Element <Element>`
         objects or a single one.
 
@@ -248,7 +229,7 @@ class BaseParser:
         *, clean:  bool = False,
         first:     bool = False,
         _encoding: Optional[str] = None,
-    ) -> _XPath:
+    ) -> '_XPath':
         '''Given an XPath selector, returns a list of :class:`Element <Element>` objects
         or a single one.
 
@@ -294,7 +275,7 @@ class BaseParser:
 
         return parse_search(template, self.html)
 
-    def search_all(self, template: str) -> _Result:
+    def search_all(self, template: str) -> '_Result':
         '''Search the :class:`Element <Element>` (multiple times) for the given parse
         template.
 
@@ -303,7 +284,7 @@ class BaseParser:
         return [r for r in findall(template, self.html)]
 
     @property
-    def links(self) -> _Links:
+    def links(self) -> '_Links':
         '''All found links on page, in as–is form.
         '''
         def gen():
@@ -341,7 +322,7 @@ class BaseParser:
         return link
 
     @property
-    def absolute_links(self) -> _Links:
+    def absolute_links(self) -> '_Links':
         '''All found links on page, in absolute form
         (`learn more <https://www.navegabem.com/absolute-or-relative-links.html>`_).
         '''
@@ -352,7 +333,7 @@ class BaseParser:
         return set(gen())
 
     @property
-    def base_url(self) -> _Url:
+    def base_url(self) -> '_Url':
         '''The base URL for the page. Supports the ``<base>`` tag
         (`learn more <https://www.w3schools.com/tags/tag_base.asp>`_).'''
 
@@ -386,7 +367,12 @@ class Element(BaseParser):
 
     __slots__ = 'tag', 'lineno', '_attrs'  # , 'session'
 
-    def __init__(self, *, element, url: _Url, default_encoding: Optional[str] = None) -> None:
+    def __init__(
+        self, *,
+        element,
+        url:              '_Url',
+        default_encoding: Optional[str] = None,
+    ) -> None:
         super().__init__(element=element, url=url, default_encoding=default_encoding)
         self.element = element
         self.tag = element.tag
@@ -398,7 +384,7 @@ class Element(BaseParser):
         return f'<Element {self.element.tag!r} {" ".join(attrs)}>'
 
     @property
-    def attrs(self) -> _Attrs:
+    def attrs(self) -> '_Attrs':
         '''Returns a dictionary of the attributes of the :class:`Element <Element>`
         (`learn more <https://www.w3schools.com/tags/ref_attributes.asp>`_).
         '''
@@ -427,7 +413,7 @@ class HTML(BaseParser):
         self,
         *, session:       Optional['BaseSession'] = None,
         url:              str = DEFAULT_URL,
-        html:             _Html,
+        html:             '_Html',
         default_encoding: Optional[str] = DEFAULT_ENCODING,
         async_:           bool = False,
     ) -> None:
@@ -443,7 +429,16 @@ class HTML(BaseParser):
             url=url,
             default_encoding=default_encoding
         )
-        self.session = session or async_ and AsyncHTMLSession() or HTMLSession()
+
+        if session:
+            self.session = session
+        elif async_:
+            from .session import AsyncHTMLSession
+            self.session = AsyncHTMLSession()
+        else:
+            from .session import HTMLSession
+            self.session = HTMLSession()
+
         self.page = None
         self.next_symbol = DEFAULT_NEXT_SYMBOL
 
@@ -453,8 +448,8 @@ class HTML(BaseParser):
     def next(
         self,
         fetch:       bool = False,
-        next_symbol: _NextSymbol = DEFAULT_NEXT_SYMBOL
-    ) -> Optional[_Next]:
+        next_symbol: '_NextSymbol' = DEFAULT_NEXT_SYMBOL
+    ) -> Optional['_Next']:
         '''Attempts to find the next page, if there is one. If ``fetch``
         is ``True`` (default), returns :class:`HTML <HTML>` object of
         next page. If ``fetch`` is ``False``, simply returns the next URL.
@@ -591,7 +586,7 @@ class HTML(BaseParser):
     def _convert_cookiejar_to_render(
         self,
         session_cookiejar,
-    ) -> _CookieRender:
+    ) -> '_CookieRender':
         '''
         Convert HTMLSession.cookies:cookiejar[] for browser.newPage().setCookie
         '''
@@ -634,7 +629,7 @@ class HTML(BaseParser):
             cookie_render.update(__convert(session_cookiejar, key))
         return cookie_render
 
-    def _convert_cookiesjar_to_render(self) -> List[_CookieRender]:
+    def _convert_cookiesjar_to_render(self) -> List['_CookieRender']:
         '''Convert ``HTMLSession.cookies`` for ``browser.newPage().setCookie``.
         '''
         if isinstance(self.session.cookies, http.cookiejar.CookieJar):
@@ -796,49 +791,6 @@ class HTML(BaseParser):
         return result
 
 
-class HTMLResponse(httpx.Response):
-    '''An HTML-enabled :class:`httpx.Response <httpx.Response>` object.
-    Effectively the same, but with an intelligent ``.html`` property added.
-    '''
-
-    def __init__(
-        self,
-        status_code: int,
-        session:     'BaseSession',
-    ) -> None:
-        super().__init__(status_code)
-        self._html = None  # type: Optional[HTML]
-        self.session = session
-
-    @property
-    def html(self) -> HTML:
-        if not self._html:
-            self._html = HTML(session=self.session,
-                              url=self.url,
-                              html=self.content,
-                              default_encoding=self.encoding)
-
-        return self._html
-
-    @classmethod
-    def _from_response(cls, response, session: 'BaseSession'):
-        html_r = cls(status_code=response.status_code, session=session)
-        html_r.__dict__.update(response.__dict__)
-        return html_r
-
-
-def user_agent(style: Optional[Mapping] = None) -> _UserAgent:
-    '''Returns an apparently legit user-agent, if not requested one of a specific
-    style. Defaults to a Chrome-style User-Agent.
-    '''
-    global useragent
-
-    if not useragent and style:
-        useragent = UserAgent()
-
-    return useragent[style] if style else DEFAULT_USER_AGENT
-
-
 def _get_first_or_list(lst, first=False):
     if first:
         try:
@@ -847,112 +799,3 @@ def _get_first_or_list(lst, first=False):
             return None
     else:
         return lst
-
-
-class BaseSession(httpx.Client):
-    '''A consumable session, for cookie persistence and connection pooling,
-    amongst other things.
-    '''
-
-    def __init__(
-        self,
-        *, mock_browser: bool = True,
-        verify:          bool = True,
-        browser_args:    list = ['--no-sandbox'],
-        proxies=None,  # TODO: fix proxies format
-    ):
-        super().__init__()
-
-        # mock a web browser's user agent
-        if mock_browser:
-            self.headers['User-Agent'] = user_agent()
-
-        self.verify = verify
-        self.proxies = proxies or {}
-        self.follow_redirects = True
-        self.__browser_args = browser_args
-
-    def request(self, *args, **kwargs) -> HTMLResponse:
-        response = super().request(*args, **kwargs)
-        if not response.encoding:
-            response.encoding = DEFAULT_ENCODING
-        return HTMLResponse._from_response(response, self)
-
-    def mount(self, pattern: str, transport: httpx._transports.base.BaseTransport) -> None:
-        self._mounts.update({httpx._utils.URLPattern(pattern): transport})
-
-    @property
-    async def browser(self):
-        if not hasattr(self, '_browser'):
-            self._browser = await pyppeteer.launch(ignoreHTTPSErrors=not(self.verify),
-                                                   headless=True,
-                                                   args=self.__browser_args)
-
-        return self._browser
-
-
-class HTMLSession(BaseSession):
-
-    @property
-    def browser(self):
-        if not hasattr(self, "_browser"):
-            self.loop = asyncio.get_event_loop()
-            if self.loop.is_running():
-                raise RuntimeError('Cannot use HTMLSession within an existing event loop. '
-                                   'Use AsyncHTMLSession instead.')
-            self._browser = self.loop.run_until_complete(super().browser)
-        return self._browser
-
-    def close(self):
-        '''If a browser was created close it first.
-        '''
-        if hasattr(self, '_browser'):
-            self.loop.run_until_complete(self._browser.close())
-        super().close()
-
-
-class AsyncHTMLSession(BaseSession):
-    '''An async consumable session.
-    '''
-
-    def __init__(
-        self,
-        loop=None,
-        workers=None,
-        mock_browser: bool = True,
-        *args,
-        **kwargs,
-    ):
-        '''Set or create an event loop and a thread pool.
-
-        :param loop: Asyncio loop to use.
-        :param workers: Amount of threads to use for executing async calls.
-            If not pass it will default to the number of processors on the
-            machine, multiplied by 5.
-        '''
-        super().__init__(*args, **kwargs)
-
-        self.loop = loop or asyncio.get_event_loop()
-        self.thread_pool = ThreadPoolExecutor(max_workers=workers)
-
-    def request(self, *args, **kwargs):
-        '''Partial original request func and run it in a thread.
-        '''
-        func = partial(super().request, *args, **kwargs)
-        return self.loop.run_in_executor(self.thread_pool, func)
-
-    async def close(self):
-        '''If a browser was created close it first.
-        '''
-        if hasattr(self, "_browser"):
-            await self._browser.close()
-        super().close()
-
-    def run(self, *coros):
-        '''Pass in all the coroutines you want to run, it will wrap each one
-        in a task, run it and wait for the result. Return a list with all
-        results, this is returned in the same order coros are passed in.
-        '''
-        tasks = [asyncio.ensure_future(coro()) for coro in coros]
-        done, _ = self.loop.run_until_complete(asyncio.wait(tasks))
-        return [t.result() for t in done]

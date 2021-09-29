@@ -4,14 +4,15 @@ from pathlib import Path
 from shutil import rmtree
 import os
 import sys
-import httpx_html
-
 
 HERE = Path(__file__).absolute().parent
+sys.path.insert(0, str(HERE / 'src'))
+
+import httpx_html  # noqa: E402
+
 
 # Note: To use the 'upload' functionality of this file, you must:
 #   $ pip install twine
-
 
 def print_bold(string):
     '''Prints things in bold.

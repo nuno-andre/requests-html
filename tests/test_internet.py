@@ -1,5 +1,6 @@
 import pytest
-from httpx_html import HTMLSession, AsyncHTMLSession, HTMLResponse
+from httpx_html import HTMLSession, AsyncHTMLSession
+from httpx_html.session import HTMLResponse
 
 session = HTMLSession()
 
