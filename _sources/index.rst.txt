@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Requests-HTML: HTML Parsing for Humans (writing Python 3)!
-==========================================================
+httpx-html: Web Scraping for Humans!
+====================================
 
 
 .. toctree::
@@ -13,8 +13,8 @@ Requests-HTML: HTML Parsing for Humans (writing Python 3)!
 
 
 
-.. image:: https://travis-ci.org/kennethreitz/requests-html.svg?branch=master
-    :target: https://travis-ci.org/kennethreitz/requests-html
+.. image:: https://travis-ci.com/psf/requests-html.svg?branch=master
+    :target: https://travis-ci.com/psf/requests-html
 
 This library intends to make parsing HTML (e.g. scraping the web) as
 simple and intuitive as possible.
@@ -23,11 +23,12 @@ When using this library you automatically get:
 
 - **Full JavaScript support**!
 - *CSS Selectors* (a.k.a jQuery-style, thanks to PyQuery).
-- *XPath Selectors*, for the faint at heart.
+- *XPath Selectors*, for the faint of heart.
 - Mocked user-agent (like a real web browser).
 - Automatic following of redirects.
 - Connection–pooling and cookie persistence.
 - The Requests experience you know and love, with magical parsing abilities.
+- **Async Support**
 
 .. Other nice features include:
 
@@ -52,10 +53,37 @@ Make a GET request to `python.org <https://python.org/>`_, using `Requests <http
 
 .. code-block:: pycon
 
-    >>> from requests_html import HTMLSession
+    >>> from httpx_html import HTMLSession
     >>> session = HTMLSession()
 
     >>> r = session.get('https://python.org/')
+
+Or want to try our async session:
+
+.. code-block:: pycon
+
+    >>> from httpx_html import AsyncHTMLSession
+    >>> asession = AsyncHTMLSession()
+
+    >>> r = await asession.get('https://python.org/')
+
+But async is fun when fetching some sites at the same time:
+
+.. code-block:: pycon
+
+    >>> from httpx_html import AsyncHTMLSession
+    >>> asession = AsyncHTMLSession()
+
+    >>> async def get_pythonorg():
+    ...    r = await asession.get('https://python.org/')
+
+    >>> async def get_reddit():
+    ...    r = await asession.get('https://reddit.com/')
+
+    >>> async def get_google():
+    ...    r = await asession.get('https://google.com/')
+
+    >>> session.run(get_pythonorg, get_reddit, get_google)
 
 Grab a list of all links on the page, as–is (anchors excluded):
 
@@ -103,7 +131,19 @@ Render out an :class:`Element <Element>`'s HTML:
     >>> about.html
     '<li aria-haspopup="true" class="tier-1 element-1 " id="about">\n<a class="" href="/about/" title="">About</a>\n<ul aria-hidden="true" class="subnav menu" role="menu">\n<li class="tier-2 element-1" role="treeitem"><a href="/about/apps/" title="">Applications</a></li>\n<li class="tier-2 element-2" role="treeitem"><a href="/about/quotes/" title="">Quotes</a></li>\n<li class="tier-2 element-3" role="treeitem"><a href="/about/gettingstarted/" title="">Getting Started</a></li>\n<li class="tier-2 element-4" role="treeitem"><a href="/about/help/" title="">Help</a></li>\n<li class="tier-2 element-5" role="treeitem"><a href="http://brochure.getpython.info/" title="">Python Brochure</a></li>\n</ul>\n</li>'
 
+Crab an :class:`Element <Element>`'s root tag name:
 
+.. code-block:: pycon
+
+   >>> about.tag
+   'li'
+
+Show the line number that an :class:`Element <Element>`'s root tag located in:
+
+.. code-block:: pycon
+
+    >>> about.lineno
+    249
 
 Select an :class:`Element <Element>` list within an :class:`Element <Element>`:
 
@@ -167,9 +207,20 @@ Let's grab some text that's rendered by JavaScript:
     >>> r.html.search('Python 2 will retire in only {months} months!')['months']
     '<time>25</time>'
 
+Or you can do this async also:
+
+.. code-block:: pycon
+
+    >>> r = asession.get('http://python-requests.org/')
+
+    >>> await r.html.arender()
+
+    >>> r.html.search('Python 2 will retire in only {months} months!')['months']
+    '<time>25</time>'
+
 Note, the first time you ever run the ``render()`` method, it will download
 Chromium into your home directory (e.g. ``~/.pyppeteer/``). This only happens
-once.
+once. You may also need to install a few `Linux packages <https://github.com/miyakogi/pyppeteer/issues/60>`_ to get pyppeteer working.
 
 Pagination
 ==========
@@ -190,6 +241,17 @@ There's also intelligent pagination support (always improving):
     <HTML url='https://www.reddit.com/?count=150&after=t3_81nrcd'>
     …
 
+For `async` pagination use the new `async for`:
+
+.. code-block:: pycon
+
+    >>> r = await asession.get('https://reddit.com')
+    >>> async for html in r.html:
+    ...     print(html)
+    <HTML url='https://www.reddit.com/'>
+    <HTML url='https://www.reddit.com/?count=25&after=t3_81puu5'>
+    …
+
 You can also just request the next URL easily:
 
 .. code-block:: pycon
@@ -205,7 +267,7 @@ You can also use this library without Requests:
 
 .. code-block:: pycon
 
-    >>> from requests_html import HTML
+    >>> from httpx_html import HTML
     >>> doc = """<a href='https://httpbin.org'>"""
 
     >>> html = HTML(html=doc)
@@ -234,6 +296,16 @@ You can also render JavaScript pages without Requests:
     >>> print(html.html)
     <html><head></head><body><a href="https://httpbin.org"></a></body></html>
 
+For using `arender` just pass `async_=True` to HTML.
+
+.. code-block:: pycon
+
+    # ^^ using above script ^^
+    >>> html = HTML(html=doc, async_=True)
+    >>> val = await html.arender(script=script, reload=False)
+    >>> print(val)
+    {'width': 800, 'height': 600, 'deviceScaleFactor': 1}
+
 
 API Documentation
 =================
@@ -241,7 +313,7 @@ API Documentation
 Main Classes
 ------------
 
-.. module:: requests_html
+.. module:: httpx_html
 
 These classes are the main interface to ``requests-html``:
 
@@ -263,6 +335,10 @@ HTML Sessions
 These sessions are for making HTTP requests:
 
 .. autoclass:: HTMLSession
+    :inherited-members:
+
+
+.. autoclass:: AsyncHTMLSession
     :inherited-members:
 
 
