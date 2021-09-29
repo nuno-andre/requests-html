@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Requests-HTML: HTML Parsing for Humans (writing Python 3)!
-==========================================================
+httpx-html: Web Scraping for Humans!
+====================================
 
 
 .. toctree::
@@ -53,7 +53,7 @@ Make a GET request to `python.org <https://python.org/>`_, using `Requests <http
 
 .. code-block:: pycon
 
-    >>> from requests_html import HTMLSession
+    >>> from httpx_html import HTMLSession
     >>> session = HTMLSession()
 
     >>> r = session.get('https://python.org/')
@@ -62,7 +62,7 @@ Or want to try our async session:
 
 .. code-block:: pycon
 
-    >>> from requests_html import AsyncHTMLSession
+    >>> from httpx_html import AsyncHTMLSession
     >>> asession = AsyncHTMLSession()
 
     >>> r = await asession.get('https://python.org/')
@@ -71,7 +71,7 @@ But async is fun when fetching some sites at the same time:
 
 .. code-block:: pycon
 
-    >>> from requests_html import AsyncHTMLSession
+    >>> from httpx_html import AsyncHTMLSession
     >>> asession = AsyncHTMLSession()
 
     >>> async def get_pythonorg():
@@ -267,7 +267,7 @@ You can also use this library without Requests:
 
 .. code-block:: pycon
 
-    >>> from requests_html import HTML
+    >>> from httpx_html import HTML
     >>> doc = """<a href='https://httpbin.org'>"""
 
     >>> html = HTML(html=doc)
@@ -313,7 +313,7 @@ API Documentation
 Main Classes
 ------------
 
-.. module:: requests_html
+.. module:: httpx_html
 
 These classes are the main interface to ``requests-html``:
 
