@@ -5,12 +5,10 @@ import pytest
 from pyppeteer.browser import Browser
 # from pyppeteer.page import Page
 from httpx_html import HTMLSession, AsyncHTMLSession, HTML
-from requests_file import FileAdapter
-import httpx_file
+from httpx_file import FileTransport
 
 session = HTMLSession()
-session.mount = httpx_file.Client.mount
-session.mount(session, 'file://', httpx_file.FileTransport())
+session.mount('file://', FileTransport())
 
 
 def get():
@@ -24,7 +22,7 @@ def async_get(event_loop):
     '''AsyncSession cannot be created global since it will create
     a different loop from pytest-asyncio.'''
     async_session = AsyncHTMLSession()
-    async_session.mount('file://', FileAdapter())
+    async_session.mount('file://', FileTransport())
     url = Path(__file__).with_name('python.html').as_uri()
 
     return partial(async_session.get, url)

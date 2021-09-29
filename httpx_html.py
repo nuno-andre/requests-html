@@ -881,6 +881,9 @@ class BaseSession(httpx.Client):
             response.encoding = DEFAULT_ENCODING
         return HTMLResponse._from_response(response, self)
 
+    def mount(self, pattern: str, transport: httpx._transports.base.BaseTransport) -> None:
+        self._mounts.update({httpx._utils.URLPattern(pattern): transport})
+
     @property
     async def browser(self):
         if not hasattr(self, '_browser'):
