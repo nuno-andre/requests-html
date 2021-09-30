@@ -1,4 +1,4 @@
-.. requests-html documentation master file, created by
+.. httpx-html documentation master file, created by
    sphinx-quickstart on Tue Feb 27 08:03:45 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
@@ -12,23 +12,19 @@ httpx-html: Web Scraping for Humans!
    :caption: Contents:
 
 
-
-.. image:: https://travis-ci.com/psf/requests-html.svg?branch=master
-    :target: https://travis-ci.com/psf/requests-html
-
-This library intends to make parsing HTML (e.g. scraping the web) as
-simple and intuitive as possible.
+This library intends to make scraping the web as simple and intuitive as possible.
 
 When using this library you automatically get:
 
 - **Full JavaScript support**!
-- *CSS Selectors* (a.k.a jQuery-style, thanks to PyQuery).
+- *CSS Selectors* (a.k.a jQuery-style, thanks to `PyQuery <https://github.com/gawel/pyquery/>`_).
 - *XPath Selectors*, for the faint of heart.
 - Mocked user-agent (like a real web browser).
 - Automatic following of redirects.
 - Connection–pooling and cookie persistence.
-- The Requests experience you know and love, with magical parsing abilities.
+- The `httpx <https://github.com/encode/httpx>`_ experience you know and love, with magical parsing abilities.
 - **Async Support**
+
 
 .. Other nice features include:
 
@@ -40,16 +36,15 @@ Installation
 
 .. code-block:: shell
 
-    $ pipenv install requests-html
-    ✨🍰✨
+    $ pip install httpx-html
 
-Only **Python 3.6** is supported.
+Only **Python 3.6+** is supported.
 
 
 Tutorial & Usage
 ================
 
-Make a GET request to `python.org <https://python.org/>`_, using `Requests <https://docs.python-requests.org/>`_:
+Make a GET request to `python.org <https://python.org/>`_, using `httpx <https://github.com/encode/httpx/>`_:
 
 .. code-block:: pycon
 
@@ -260,10 +255,10 @@ You can also just request the next URL easily:
     >>> r.html.next()
     'https://www.reddit.com/?count=25&after=t3_81pm82'
 
-Using without Requests
-======================
+Using without httpx
+===================
 
-You can also use this library without Requests:
+You can also use this library without httpx:
 
 .. code-block:: pycon
 
@@ -274,7 +269,7 @@ You can also use this library without Requests:
     >>> html.links
     {'https://httpbin.org'}
 
-You can also render JavaScript pages without Requests:
+You can also render JavaScript pages without httpx:
 
 .. code-block:: pycon
 
@@ -315,7 +310,7 @@ Main Classes
 
 .. module:: httpx_html
 
-These classes are the main interface to ``requests-html``:
+These classes are the main interface to ``httpx-html``:
 
 
 .. autoclass:: HTML

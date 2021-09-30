@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=source
 set BUILDDIR=build
-set SPHINXPROJ=requests-html
+set SPHINXPROJ=httpx-html
 
 if "%1" == "" goto help
 

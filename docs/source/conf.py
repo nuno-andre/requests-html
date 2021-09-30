@@ -23,11 +23,12 @@ import httpx_html
 project = 'httpx-HTML'
 copyright = u'MMXVIII. A <a href="http://kennethreitz.com/pages/open-projects.html">Kenneth Reitz</a> Project'  # noqa
 author = 'Kenneth Reitz'
+maintainer = 'Nuno André'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = 'v0.3.4'
+release = 'v0.11.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -90,8 +91,8 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'show_powered_by': False,
-    'github_user': 'psf',
-    'github_repo': 'requests-html',
+    'github_user': 'nuno-andre',
+    'github_repo': 'httpx-html',
     'github_banner': True,
     'show_related': False,
     'note_bg': '#FFF59C'
@@ -123,7 +124,7 @@ html_show_sourcelink = False
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'requests-htmldoc'
+htmlhelp_basename = 'httpx-htmldoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -150,8 +151,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'requests-html.tex', 'requests-html Documentation',
-     'Kenneth Reitz', 'manual'),
+    (master_doc, 'httpx-html.tex', 'httpx-html Documentation',
+     author, 'manual'),
 ]
 
 
@@ -160,7 +161,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'requests-html', 'requests-html Documentation',
+    (master_doc, 'httpx-html', 'httpx-html Documentation',
      [author], 1)
 ]
 
@@ -171,8 +172,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'requests-html', 'requests-html Documentation',
-     author, 'requests-html', 'One line description of project.',
+    (master_doc, 'httpx-html', 'httpx-html Documentation',
+     author, 'httpx-html', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -182,7 +183,7 @@ texinfo_documents = [
 # Bibliographic Dublin Core info.
 epub_title = project
 epub_author = author
-epub_publisher = author
+epub_publisher = maintainer
 epub_copyright = copyright
 
 # The unique identifier of the text. This can be a ISBN number

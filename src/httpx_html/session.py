@@ -70,7 +70,7 @@ class BaseSession(httpx.Client):
         *, mock_browser: bool = True,
         verify:          bool = True,
         browser_args:    list = ['--no-sandbox'],
-        proxies=None,  # TODO: fix proxies format
+        proxies:         Optional[Mapping[str, str]] = None,
     ) -> None:
         super().__init__()
 
@@ -79,9 +79,14 @@ class BaseSession(httpx.Client):
             self.headers['User-Agent'] = user_agent()
 
         self.verify = verify
-        self.proxies = proxies or {}
         self.follow_redirects = True
         self.__browser_args = browser_args
+
+        if proxies:
+            # fix requests-style proxy declaration
+            self.proxies = {(k if ':' in k else f'{k}://'): v for k, v in proxies.items()}
+        else:
+            self.proxies = dict()
 
     def request(self, *args, **kwargs) -> HTMLResponse:
         response = super().request(*args, **kwargs)
