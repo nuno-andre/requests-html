@@ -58,27 +58,27 @@ Or want to try our async session:
 .. code-block:: pycon
 
     >>> from httpx_html import AsyncHTMLSession
-    >>> asession = AsyncHTMLSession()
+    >>> with AsyncHTMLSession() as asession:
 
-    >>> r = await asession.get('https://python.org/')
+    >>>     r = await asession.get('https://python.org/')
 
 But async is fun when fetching some sites at the same time:
 
 .. code-block:: pycon
 
     >>> from httpx_html import AsyncHTMLSession
-    >>> asession = AsyncHTMLSession()
+    >>> with AsyncHTMLSession() as asession:
 
-    >>> async def get_pythonorg():
-    ...    r = await asession.get('https://python.org/')
+    >>>     async def get_pythonorg():
+    ...         r = await asession.get('https://python.org/')
 
-    >>> async def get_reddit():
-    ...    r = await asession.get('https://reddit.com/')
+    >>>     async def get_reddit():
+    ...         r = await asession.get('https://reddit.com/')
 
-    >>> async def get_google():
-    ...    r = await asession.get('https://google.com/')
+    >>>     async def get_google():
+    ...         r = await asession.get('https://google.com/')
 
-    >>> session.run(get_pythonorg, get_reddit, get_google)
+    >>>     asession.run(get_pythonorg, get_reddit, get_google)
 
 Grab a list of all links on the page, as–is (anchors excluded):
 

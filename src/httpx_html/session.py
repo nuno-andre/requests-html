@@ -151,6 +151,18 @@ class AsyncHTMLSession(BaseSession):
         self.loop = loop or asyncio.get_event_loop()
         self.thread_pool = ThreadPoolExecutor(max_workers=workers)
 
+    async def __aenter__(self) -> 'AsyncHTMLSession':
+        return self
+
+    async def __aexit__(self, exc_t, exc_v, exc_tb) -> None:
+        try:
+            await self.close()
+        except Exception:
+            pass
+
+        if exc_t:
+            raise exc_t(exc_v)
+
     def request(self, *args, **kwargs) -> HTMLResponse:
         '''Partial original request func and run it in a thread.
         '''
