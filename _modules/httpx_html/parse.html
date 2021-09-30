@@ -5,17 +5,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>httpx_html &#8212; httpx-HTML v0.3.4 documentation</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
+    <title>httpx_html.parse &#8212; httpx-HTML v0.11.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -30,21 +30,15 @@
 
           <div class="body" role="main">
             
-  <h1>Source code for httpx_html</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">asyncio</span>
+  <h1>Source code for httpx_html.parse</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">asyncio</span>
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">urlunparse</span><span class="p">,</span> <span class="n">urljoin</span>
-<span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
 <span class="kn">from</span> <span class="nn">concurrent.futures._base</span> <span class="kn">import</span> <span class="ne">TimeoutError</span>
-<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">NewType</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
 
-<span class="kn">import</span> <span class="nn">pyppeteer</span>
-<span class="kn">import</span> <span class="nn">httpx</span>
 <span class="kn">import</span> <span class="nn">http.cookiejar</span>
 <span class="kn">from</span> <span class="nn">pyquery</span> <span class="kn">import</span> <span class="n">PyQuery</span>
 
-<span class="kn">from</span> <span class="nn">fake_useragent</span> <span class="kn">import</span> <span class="n">UserAgent</span>
 <span class="kn">from</span> <span class="nn">lxml.html.clean</span> <span class="kn">import</span> <span class="n">Cleaner</span>
 <span class="kn">import</span> <span class="nn">lxml</span>
 <span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
@@ -55,43 +49,30 @@
 <span class="kn">from</span> <span class="nn">parse</span> <span class="kn">import</span> <span class="n">findall</span><span class="p">,</span> <span class="n">Result</span>
 <span class="kn">from</span> <span class="nn">w3lib.encoding</span> <span class="kn">import</span> <span class="n">html_to_unicode</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;dev0&#39;</span>
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.session</span> <span class="kn">import</span> <span class="n">BaseSession</span>
+
+    <span class="n">_Attrs</span> <span class="o">=</span> <span class="n">MutableMapping</span>
+    <span class="n">_Containing</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+    <span class="n">_CookieRender</span> <span class="o">=</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">http</span><span class="o">.</span><span class="n">cookiejar</span><span class="o">.</span><span class="n">CookieJar</span><span class="p">]</span>
+    <span class="n">_Encoding</span> <span class="o">=</span> <span class="n">NewType</span><span class="p">(</span><span class="s1">&#39;_Encoding&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="n">_Find</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;Element&#39;</span><span class="p">],</span> <span class="s1">&#39;Element&#39;</span><span class="p">]</span>
+    <span class="n">_Html</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span>
+    <span class="n">_Links</span> <span class="o">=</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">_Next</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;HTML&#39;</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+    <span class="n">_NextSymbol</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">_Result</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;Result&#39;</span><span class="p">],</span> <span class="s1">&#39;Result&#39;</span><span class="p">]</span>
+    <span class="n">_Text</span> <span class="o">=</span> <span class="n">NewType</span><span class="p">(</span><span class="s1">&#39;_Text&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="n">_Url</span> <span class="o">=</span> <span class="n">NewType</span><span class="p">(</span><span class="s1">&#39;_Url&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="n">_XPath</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="s1">&#39;Element&#39;</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="s1">&#39;Element&#39;</span><span class="p">]</span>
 
 <span class="n">DEFAULT_ENCODING</span> <span class="o">=</span> <span class="s1">&#39;utf-8&#39;</span>
 <span class="n">DEFAULT_URL</span> <span class="o">=</span> <span class="s1">&#39;https://example.org/&#39;</span>
-<span class="n">DEFAULT_USER_AGENT</span> <span class="o">=</span> <span class="s1">&#39;Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8&#39;</span>  <span class="c1"># noqa</span>
 <span class="n">DEFAULT_NEXT_SYMBOL</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;next&#39;</span><span class="p">,</span> <span class="s1">&#39;more&#39;</span><span class="p">,</span> <span class="s1">&#39;older&#39;</span><span class="p">]</span>
 
 <span class="n">cleaner</span> <span class="o">=</span> <span class="n">Cleaner</span><span class="p">()</span>
 <span class="n">cleaner</span><span class="o">.</span><span class="n">javascript</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="n">cleaner</span><span class="o">.</span><span class="n">style</span> <span class="o">=</span> <span class="kc">True</span>
-
-<span class="n">useragent</span> <span class="o">=</span> <span class="kc">None</span>
-
-<span class="c1"># Typing.</span>
-<span class="n">_Find</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;Element&#39;</span><span class="p">],</span> <span class="s1">&#39;Element&#39;</span><span class="p">]</span>
-<span class="n">_XPath</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="s1">&#39;Element&#39;</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="s1">&#39;Element&#39;</span><span class="p">]</span>
-<span class="n">_Result</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;Result&#39;</span><span class="p">],</span> <span class="s1">&#39;Result&#39;</span><span class="p">]</span>
-<span class="n">_Html</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span>
-<span class="n">_BaseHTML</span> <span class="o">=</span> <span class="nb">str</span>
-<span class="n">_UserAgent</span> <span class="o">=</span> <span class="nb">str</span>
-<span class="n">_DefaultEncoding</span> <span class="o">=</span> <span class="nb">str</span>
-<span class="n">_Url</span> <span class="o">=</span> <span class="nb">str</span>
-<span class="n">_RawHTML</span> <span class="o">=</span> <span class="nb">bytes</span>
-<span class="n">_Encoding</span> <span class="o">=</span> <span class="nb">str</span>
-<span class="n">_Text</span> <span class="o">=</span> <span class="nb">str</span>
-<span class="n">_Search</span> <span class="o">=</span> <span class="n">Result</span>
-<span class="n">_Containing</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
-<span class="n">_Links</span> <span class="o">=</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-<span class="n">_Attrs</span> <span class="o">=</span> <span class="n">MutableMapping</span>
-<span class="n">_Next</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;HTML&#39;</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
-<span class="n">_NextSymbol</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-
-<span class="c1"># Sanity checking.</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="k">assert</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
-<span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;httpx-HTML requires Python 3.6+!&#39;</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">MaxRetries</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
@@ -109,12 +90,15 @@
 <span class="sd">    :param url: The URL from which the HTML originated, used for ``absolute_links``.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;element&#39;</span><span class="p">,</span> <span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;skip_anchors&#39;</span><span class="p">,</span> <span class="s1">&#39;default_encoding&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;_encoding&#39;</span><span class="p">,</span> <span class="s1">&#39;_html&#39;</span><span class="p">,</span> <span class="s1">&#39;_lxml&#39;</span><span class="p">,</span> <span class="s1">&#39;_pq&#39;</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span> <span class="n">element</span><span class="p">,</span>
-        <span class="n">default_encoding</span><span class="p">:</span> <span class="n">_DefaultEncoding</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">html</span><span class="p">:</span>             <span class="n">_Html</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">url</span><span class="p">:</span>              <span class="n">_Url</span><span class="p">,</span>
+        <span class="n">default_encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">html</span><span class="p">:</span>             <span class="s1">&#39;_Html&#39;</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">:</span>              <span class="s1">&#39;_Url&#39;</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">element</span> <span class="o">=</span> <span class="n">element</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
@@ -126,19 +110,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_pq</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">raw_html</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_RawHTML</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">raw_html</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;Bytes representation of the HTML content.</span>
-<span class="sd">        (`learn more &lt;http://www.diveintopython3.net/strings.html&gt;`_).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">etree</span><span class="o">.</span><span class="n">tostring</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">element</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;unicode&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span>
 
+    <span class="nd">@raw_html</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">raw_html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">html</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_html</span> <span class="o">=</span> <span class="n">html</span>
+
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">html</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_BaseHTML</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">html</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;Unicode representation of the HTML content</span>
-<span class="sd">        (`learn more &lt;http://www.diveintopython3.net/strings.html&gt;`_).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_html</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
@@ -149,21 +135,15 @@
     <span class="k">def</span> <span class="nf">html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">html</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_html</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span>
 
-    <span class="nd">@raw_html</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">raw_html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">html</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Property setter for self.html.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_html</span> <span class="o">=</span> <span class="n">html</span>
-
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">encoding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Encoding</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">encoding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Encoding&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;The encoding string to be used, extracted from the HTML and</span>
 <span class="sd">        :class:`HTMLResponse &lt;HTMLResponse&gt;` headers.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="c1"># Scan meta tags for charset.</span>
+        <span class="c1"># scan meta tags for charset</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">html_to_unicode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_encoding</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="c1"># Fall back to httpx&#39; detected encoding if decode fails.</span>
+            <span class="c1"># fall back to httpx&#39;s detected encoding if decode fails</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">raw_html</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">UnicodeDecodeError</span><span class="p">:</span>
@@ -173,12 +153,11 @@
 
     <span class="nd">@encoding</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">encoding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enc</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Property setter for self.encoding.&#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">enc</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">pq</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PyQuery</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;`PyQuery &lt;https://pythonhosted.org/pyquery/&gt;`_ representation</span>
+        <span class="sd">&#39;&#39;&#39;`PyQuery &lt;https://github.com/gawel/pyquery/&gt;`_ representation</span>
 <span class="sd">        of the :class:`Element &lt;Element&gt;` or :class:`HTML &lt;HTML&gt;`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -188,7 +167,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">lxml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HtmlElement</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;`lxml &lt;http://lxml.de&gt;`_ representation of the</span>
+        <span class="sd">&#39;&#39;&#39;`lxml &lt;https://lxml.de&gt;`_ representation of the</span>
 <span class="sd">        :class:`Element &lt;Element&gt;` or :class:`HTML &lt;HTML&gt;`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lxml</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -200,13 +179,13 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lxml</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">text</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Text</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">text</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Text&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;The text content of the :class:`Element &lt;Element&gt;` or :class:`HTML &lt;HTML&gt;`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pq</span><span class="o">.</span><span class="n">text</span><span class="p">()</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">full_text</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Text</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">full_text</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Text&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;The full text content (including links) of the :class:`Element &lt;Element&gt;`</span>
 <span class="sd">        or :class:`HTML &lt;HTML&gt;`.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -215,11 +194,11 @@
     <span class="k">def</span> <span class="nf">find</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">selector</span><span class="p">:</span>      <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span> <span class="n">containing</span><span class="p">:</span> <span class="n">_Containing</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span> <span class="n">containing</span><span class="p">:</span> <span class="s1">&#39;_Containing&#39;</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">clean</span><span class="p">:</span>         <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">first</span><span class="p">:</span>         <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">_encoding</span><span class="p">:</span>     <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Find</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Find&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;Given a CSS Selector, returns a list of :class:`Element &lt;Element&gt;`</span>
 <span class="sd">        objects or a single one.</span>
 
@@ -283,7 +262,7 @@
         <span class="o">*</span><span class="p">,</span> <span class="n">clean</span><span class="p">:</span>  <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">first</span><span class="p">:</span>     <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">_encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_XPath</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_XPath&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;Given an XPath selector, returns a list of :class:`Element &lt;Element&gt;` objects</span>
 <span class="sd">        or a single one.</span>
 
@@ -308,9 +287,9 @@
             <span class="n">Element</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">selection</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">default_encoding</span><span class="o">=</span><span class="n">_encoding</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">selection</span><span class="p">,</span> <span class="n">etree</span><span class="o">.</span><span class="n">_ElementUnicodeResult</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">selection</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">selection</span> <span class="ow">in</span> <span class="n">selected</span>
-        <span class="p">]</span>
+        <span class="p">]</span>  <span class="c1"># type: List[Element]</span>
 
-        <span class="c1"># Sanitize the found HTML.</span>
+        <span class="c1"># Sanitize the found HTML</span>
         <span class="k">if</span> <span class="n">clean</span><span class="p">:</span>
             <span class="n">elements_copy</span> <span class="o">=</span> <span class="n">elements</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="n">elements</span> <span class="o">=</span> <span class="p">[]</span>
@@ -329,7 +308,7 @@
 
         <span class="k">return</span> <span class="n">parse_search</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">html</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">search_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Result</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">search_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Result&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;Search the :class:`Element &lt;Element&gt;` (multiple times) for the given parse</span>
 <span class="sd">        template.</span>
 
@@ -338,7 +317,7 @@
         <span class="k">return</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">findall</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">html</span><span class="p">)]</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">links</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Links</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">links</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Links&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;All found links on page, in as–is form.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">def</span> <span class="nf">gen</span><span class="p">():</span>
@@ -376,7 +355,7 @@
         <span class="k">return</span> <span class="n">link</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">absolute_links</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Links</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">absolute_links</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Links&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;All found links on page, in absolute form</span>
 <span class="sd">        (`learn more &lt;https://www.navegabem.com/absolute-or-relative-links.html&gt;`_).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -387,31 +366,31 @@
         <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">gen</span><span class="p">())</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">base_url</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Url</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">base_url</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Url&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;The base URL for the page. Supports the ``&lt;base&gt;`` tag</span>
 <span class="sd">        (`learn more &lt;https://www.w3schools.com/tags/tag_base.asp&gt;`_).&#39;&#39;&#39;</span>
 
-        <span class="c1"># Support for &lt;base&gt; tag.</span>
+        <span class="c1"># support for &lt;base&gt; tag</span>
         <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;base&#39;</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">base</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;href&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">result</span>
 
-        <span class="c1"># Parse the url to separate out the path</span>
+        <span class="c1"># parse the url to separate out the path</span>
         <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">_asdict</span><span class="p">()</span>
 
-        <span class="c1"># Remove any part of the path after the last &#39;/&#39;</span>
+        <span class="c1"># remove any part of the path after the last &#39;/&#39;</span>
         <span class="n">parsed</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parsed</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span>
 
-        <span class="c1"># Reconstruct the url with the modified path</span>
+        <span class="c1"># reconstruct the url with the modified path</span>
         <span class="n">parsed</span> <span class="o">=</span> <span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">parsed</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
         <span class="n">url</span> <span class="o">=</span> <span class="n">urlunparse</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">url</span>
 
 
-<div class="viewcode-block" id="Element"><a class="viewcode-back" href="../index.html#httpx_html.Element">[docs]</a><span class="k">class</span> <span class="nc">Element</span><span class="p">(</span><span class="n">BaseParser</span><span class="p">):</span>
+<div class="viewcode-block" id="Element"><a class="viewcode-back" href="../../index.html#httpx_html.Element">[docs]</a><span class="k">class</span> <span class="nc">Element</span><span class="p">(</span><span class="n">BaseParser</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;An element of HTML.</span>
 
 <span class="sd">    :param element: The element from which to base the parsing upon.</span>
@@ -419,12 +398,14 @@
 <span class="sd">    :param default_encoding: Which encoding to default to.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="s1">&#39;element&#39;</span><span class="p">,</span> <span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;skip_anchors&#39;</span><span class="p">,</span> <span class="s1">&#39;default_encoding&#39;</span><span class="p">,</span> <span class="s1">&#39;_encoding&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;_html&#39;</span><span class="p">,</span> <span class="s1">&#39;_lxml&#39;</span><span class="p">,</span> <span class="s1">&#39;_pq&#39;</span><span class="p">,</span> <span class="s1">&#39;_attrs&#39;</span><span class="p">,</span> <span class="s1">&#39;session&#39;</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="s1">&#39;tag&#39;</span><span class="p">,</span> <span class="s1">&#39;lineno&#39;</span><span class="p">,</span> <span class="s1">&#39;_attrs&#39;</span>  <span class="c1"># , &#39;session&#39;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">element</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="n">_Url</span><span class="p">,</span> <span class="n">default_encoding</span><span class="p">:</span> <span class="n">_DefaultEncoding</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+        <span class="n">element</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">:</span>              <span class="s1">&#39;_Url&#39;</span><span class="p">,</span>
+        <span class="n">default_encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">element</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span> <span class="n">default_encoding</span><span class="o">=</span><span class="n">default_encoding</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">element</span> <span class="o">=</span> <span class="n">element</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span>
@@ -432,18 +413,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">attrs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">attr</span><span class="p">]))</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">]</span>
-        <span class="k">return</span> <span class="s2">&quot;&lt;Element </span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">tag</span><span class="p">),</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">attrs</span><span class="p">))</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="si">!r}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">]</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;&lt;Element </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">tag</span><span class="si">!r}</span><span class="s1"> </span><span class="si">{</span><span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span><span class="si">}</span><span class="s1">&gt;&#39;</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Attrs</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_Attrs&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;Returns a dictionary of the attributes of the :class:`Element &lt;Element&gt;`</span>
 <span class="sd">        (`learn more &lt;https://www.w3schools.com/tags/ref_attributes.asp&gt;`_).</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
-            <span class="c1"># Split class and rel up, as there are usually many of them:</span>
+            <span class="c1"># split class and rel up, as there are usually many of them</span>
             <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="s1">&#39;rel&#39;</span><span class="p">]:</span>
                 <span class="k">if</span> <span class="n">attr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
@@ -451,7 +432,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span></div>
 
 
-<div class="viewcode-block" id="HTML"><a class="viewcode-back" href="../index.html#httpx_html.HTML">[docs]</a><span class="k">class</span> <span class="nc">HTML</span><span class="p">(</span><span class="n">BaseParser</span><span class="p">):</span>
+<div class="viewcode-block" id="HTML"><a class="viewcode-back" href="../../index.html#httpx_html.HTML">[docs]</a><span class="k">class</span> <span class="nc">HTML</span><span class="p">(</span><span class="n">BaseParser</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;An HTML document, ready for parsing.</span>
 
 <span class="sd">    :param url: The URL from which the HTML originated, used for ``absolute_links``.</span>
@@ -459,16 +440,18 @@
 <span class="sd">    :param default_encoding: Which encoding to default to.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="s1">&#39;session&#39;</span><span class="p">,</span> <span class="s1">&#39;page&#39;</span><span class="p">,</span> <span class="s1">&#39;next_symbol&#39;</span>
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span>       <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;HTMLSession&#39;</span><span class="p">,</span> <span class="s1">&#39;AsyncHTMLSession&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span>       <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;BaseSession&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">url</span><span class="p">:</span>              <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_URL</span><span class="p">,</span>
-        <span class="n">html</span><span class="p">:</span>             <span class="n">_Html</span><span class="p">,</span>
-        <span class="n">default_encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_ENCODING</span><span class="p">,</span>
+        <span class="n">html</span><span class="p">:</span>             <span class="s1">&#39;_Html&#39;</span><span class="p">,</span>
+        <span class="n">default_encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_ENCODING</span><span class="p">,</span>
         <span class="n">async_</span><span class="p">:</span>           <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
-        <span class="c1"># Convert incoming unicode HTML into bytes.</span>
+        <span class="c1"># convert incoming unicode HTML into bytes</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">html</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">DEFAULT_ENCODING</span><span class="p">)</span>
 
@@ -479,14 +462,27 @@
             <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
             <span class="n">default_encoding</span><span class="o">=</span><span class="n">default_encoding</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span> <span class="ow">or</span> <span class="n">async_</span> <span class="ow">and</span> <span class="n">AsyncHTMLSession</span><span class="p">()</span> <span class="ow">or</span> <span class="n">HTMLSession</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span>
+        <span class="k">elif</span> <span class="n">async_</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">.session</span> <span class="kn">import</span> <span class="n">AsyncHTMLSession</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">AsyncHTMLSession</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">.session</span> <span class="kn">import</span> <span class="n">HTMLSession</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">HTMLSession</span><span class="p">()</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">next_symbol</span> <span class="o">=</span> <span class="n">DEFAULT_NEXT_SYMBOL</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;&lt;HTML url=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="si">!r}</span><span class="s1">&gt;&#39;</span>
 
-<div class="viewcode-block" id="HTML.next"><a class="viewcode-back" href="../index.html#httpx_html.HTML.next">[docs]</a>    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fetch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">next_symbol</span><span class="p">:</span> <span class="n">_NextSymbol</span> <span class="o">=</span> <span class="n">DEFAULT_NEXT_SYMBOL</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Next</span><span class="p">:</span>
+<div class="viewcode-block" id="HTML.next"><a class="viewcode-back" href="../../index.html#httpx_html.HTML.next">[docs]</a>    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">fetch</span><span class="p">:</span>       <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">next_symbol</span><span class="p">:</span> <span class="s1">&#39;_NextSymbol&#39;</span> <span class="o">=</span> <span class="n">DEFAULT_NEXT_SYMBOL</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;_Next&#39;</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;Attempts to find the next page, if there is one. If ``fetch``</span>
 <span class="sd">        is ``True`` (default), returns :class:`HTML &lt;HTML&gt;` object of</span>
 <span class="sd">        next page. If ``fetch`` is ``False``, simply returns the next URL.</span>
@@ -510,7 +506,7 @@
                         <span class="k">return</span> <span class="n">candidate</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;href&#39;</span><span class="p">]</span>
 
             <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># Resort to the last candidate.</span>
+                <span class="c1"># resort to the last candidate</span>
                 <span class="k">return</span> <span class="n">candidates</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;href&#39;</span><span class="p">]</span>
             <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
                 <span class="k">return</span> <span class="kc">None</span>
@@ -565,7 +561,7 @@
         <span class="n">reload</span><span class="p">,</span>
         <span class="n">content</span><span class="p">:</span>    <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">timeout</span><span class="p">:</span>    <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
-        <span class="n">wait_until</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">wait_until</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]],</span>
         <span class="n">keep_page</span><span class="p">:</span>  <span class="nb">bool</span><span class="p">,</span>
         <span class="n">cookies</span><span class="p">:</span>    <span class="nb">list</span> <span class="o">=</span> <span class="p">[{}],</span>
     <span class="p">):</span>
@@ -574,7 +570,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">page</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">browser</span><span class="o">.</span><span class="n">newPage</span><span class="p">()</span>
 
-            <span class="c1"># Wait before rendering the page, to prevent timeouts.</span>
+            <span class="c1"># wait before rendering the page, to prevent timeouts</span>
             <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="s1">&#39;User-Agent&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
@@ -589,7 +585,7 @@
             <span class="k">if</span> <span class="n">wait_until</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">options</span><span class="p">[</span><span class="s1">&#39;waitUntil&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wait_until</span>
 
-            <span class="c1"># Load the given page (GET request, obviously.)</span>
+            <span class="c1"># load the given page (GET request, obviously)</span>
             <span class="k">if</span> <span class="n">reload</span><span class="p">:</span>
                 <span class="k">await</span> <span class="n">page</span><span class="o">.</span><span class="n">goto</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
@@ -620,7 +616,10 @@
             <span class="n">page</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">_convert_cookiejar_to_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_cookiejar</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_convert_cookiejar_to_render</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">session_cookiejar</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_CookieRender&#39;</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Convert HTMLSession.cookies:cookiejar[] for browser.newPage().setCookie</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -642,7 +641,7 @@
 
         <span class="k">def</span> <span class="nf">__convert</span><span class="p">(</span><span class="n">cookiejar</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">v</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;cookiejar.&quot;</span><span class="o">+</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;cookiejar.</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
                 <span class="n">kv</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">v</span> <span class="k">else</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">v</span><span class="p">}</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="n">kv</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
@@ -663,17 +662,15 @@
             <span class="n">cookie_render</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">__convert</span><span class="p">(</span><span class="n">session_cookiejar</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">cookie_render</span>
 
-    <span class="k">def</span> <span class="nf">_convert_cookiesjar_to_render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">MutableMapping</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;Convert HTMLSession.cookies for browser.newPage().setCookie</span>
-<span class="sd">        Return a list of dict</span>
+    <span class="k">def</span> <span class="nf">_convert_cookiesjar_to_render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s1">&#39;_CookieRender&#39;</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;Convert ``HTMLSession.cookies`` for ``browser.newPage().setCookie``.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">cookies_render</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">cookies</span><span class="p">,</span> <span class="n">http</span><span class="o">.</span><span class="n">cookiejar</span><span class="o">.</span><span class="n">CookieJar</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">cookie</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">cookies</span><span class="p">:</span>
-                <span class="n">cookies_render</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_convert_cookiejar_to_render</span><span class="p">(</span><span class="n">cookie</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">cookies_render</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_convert_cookiejar_to_render</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">cookies</span><span class="p">]</span>
 
-<div class="viewcode-block" id="HTML.render"><a class="viewcode-back" href="../index.html#httpx_html.HTML.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="HTML.render"><a class="viewcode-back" href="../../index.html#httpx_html.HTML.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">retries</span><span class="p">:</span>              <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
         <span class="n">script</span><span class="p">:</span>               <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -743,7 +740,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">browser</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">browser</span>  <span class="c1"># Automatically create a event loop and browser</span>
         <span class="n">content</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="c1"># Automatically set Reload to False, if example URL is being used.</span>
+        <span class="c1"># automatically set reload to False, if example URL is being used</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">==</span> <span class="n">DEFAULT_URL</span><span class="p">:</span>
             <span class="n">reload</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -775,7 +772,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">=</span> <span class="n">page</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
-<div class="viewcode-block" id="HTML.arender"><a class="viewcode-back" href="../index.html#httpx_html.HTML.arender">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">arender</span><span class="p">(</span>
+<div class="viewcode-block" id="HTML.arender"><a class="viewcode-back" href="../../index.html#httpx_html.HTML.arender">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">arender</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">retries</span><span class="p">:</span>              <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
         <span class="n">script</span><span class="p">:</span>               <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -795,7 +792,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">browser</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">browser</span>
         <span class="n">content</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="c1"># Automatically set Reload to False, if example URL is being used.</span>
+        <span class="c1"># automatically set Reload to False, if example URL is being used</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">==</span> <span class="n">DEFAULT_URL</span><span class="p">:</span>
             <span class="n">reload</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -827,48 +824,6 @@
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
-<span class="k">class</span> <span class="nc">HTMLResponse</span><span class="p">(</span><span class="n">httpx</span><span class="o">.</span><span class="n">Response</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;An HTML-enabled :class:`httpx.Response &lt;httpx.Response&gt;` object.</span>
-<span class="sd">    Effectively the same, but with an intelligent ``.html`` property added.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">session</span><span class="p">:</span>     <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;HTMLSession&#39;</span><span class="p">,</span> <span class="s1">&#39;AsyncHTMLSession&#39;</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">status_code</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_html</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: HTML</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">html</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HTML</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_html</span> <span class="o">=</span> <span class="n">HTML</span><span class="p">(</span><span class="n">session</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">,</span>
-                              <span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span>
-                              <span class="n">html</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">,</span>
-                              <span class="n">default_encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_html</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">_from_response</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;HTMLSession&#39;</span><span class="p">,</span> <span class="s1">&#39;AsyncHTMLSession&#39;</span><span class="p">]):</span>
-        <span class="n">html_r</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">)</span>
-        <span class="n">html_r</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">html_r</span>
-
-
-<div class="viewcode-block" id="user_agent"><a class="viewcode-back" href="../index.html#httpx_html.user_agent">[docs]</a><span class="k">def</span> <span class="nf">user_agent</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_UserAgent</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;Returns an apparently legit user-agent, if not requested one of a specific</span>
-<span class="sd">    style. Defaults to a Chrome-style User-Agent.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">global</span> <span class="n">useragent</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">useragent</span> <span class="ow">and</span> <span class="n">style</span><span class="p">:</span>
-        <span class="n">useragent</span> <span class="o">=</span> <span class="n">UserAgent</span><span class="p">()</span>
-
-    <span class="k">return</span> <span class="n">useragent</span><span class="p">[</span><span class="n">style</span><span class="p">]</span> <span class="k">if</span> <span class="n">style</span> <span class="k">else</span> <span class="n">DEFAULT_USER_AGENT</span></div>
-
-
 <span class="k">def</span> <span class="nf">_get_first_or_list</span><span class="p">(</span><span class="n">lst</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -877,115 +832,6 @@
             <span class="k">return</span> <span class="kc">None</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">lst</span>
-
-
-<span class="k">class</span> <span class="nc">BaseSession</span><span class="p">(</span><span class="n">httpx</span><span class="o">.</span><span class="n">Client</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;A consumable session, for cookie persistence and connection pooling,</span>
-<span class="sd">    amongst other things.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span> <span class="n">mock_browser</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">verify</span><span class="p">:</span>          <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">browser_args</span><span class="p">:</span>    <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;--no-sandbox&#39;</span><span class="p">],</span>
-        <span class="n">proxies</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
-        <span class="c1"># Mock a web browser&#39;s user agent.</span>
-        <span class="k">if</span> <span class="n">mock_browser</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user_agent</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">verify</span> <span class="o">=</span> <span class="n">verify</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">proxies</span> <span class="o">=</span> <span class="n">proxies</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">follow_redirects</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__browser_args</span> <span class="o">=</span> <span class="n">browser_args</span>
-
-    <span class="k">def</span> <span class="nf">request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HTMLResponse</span><span class="p">:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="o">.</span><span class="n">encoding</span><span class="p">:</span>
-            <span class="n">response</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">DEFAULT_ENCODING</span>
-        <span class="k">return</span> <span class="n">HTMLResponse</span><span class="o">.</span><span class="n">_from_response</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">browser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_browser&#39;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pyppeteer</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">ignoreHTTPSErrors</span><span class="o">=</span><span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verify</span><span class="p">),</span>
-                                                   <span class="n">headless</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                                                   <span class="n">args</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__browser_args</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span>
-
-
-<div class="viewcode-block" id="HTMLSession"><a class="viewcode-back" href="../index.html#httpx_html.HTMLSession">[docs]</a><span class="k">class</span> <span class="nc">HTMLSession</span><span class="p">(</span><span class="n">BaseSession</span><span class="p">):</span>
-
-    <span class="c1"># def __init__(self, **kwargs):</span>
-    <span class="c1">#     super().__init__(**kwargs)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">browser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_browser&quot;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">is_running</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Cannot use HTMLSession within an existing event loop. &#39;</span>
-                                   <span class="s1">&#39;Use AsyncHTMLSession instead.&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">browser</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span>
-
-<div class="viewcode-block" id="HTMLSession.close"><a class="viewcode-back" href="../index.html#httpx_html.HTMLSession.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;If a browser was created close it first.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_browser&#39;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="o">.</span><span class="n">close</span><span class="p">())</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
-
-
-<div class="viewcode-block" id="AsyncHTMLSession"><a class="viewcode-back" href="../index.html#httpx_html.AsyncHTMLSession">[docs]</a><span class="k">class</span> <span class="nc">AsyncHTMLSession</span><span class="p">(</span><span class="n">BaseSession</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;An async consumable session.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">workers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">mock_browser</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="o">*</span><span class="n">args</span><span class="p">,</span>
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Set or create an event loop and a thread pool.</span>
-
-<span class="sd">        :param loop: Asyncio loop to use.</span>
-<span class="sd">        :param workers: Amount of threads to use for executing async calls.</span>
-<span class="sd">            If not pass it will default to the number of processors on the</span>
-<span class="sd">            machine, multiplied by 5.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span> <span class="ow">or</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">thread_pool</span> <span class="o">=</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">workers</span><span class="p">)</span>
-
-<div class="viewcode-block" id="AsyncHTMLSession.request"><a class="viewcode-back" href="../index.html#httpx_html.AsyncHTMLSession.request">[docs]</a>    <span class="k">def</span> <span class="nf">request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Partial original request func and run it in a thread.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">run_in_executor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thread_pool</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="AsyncHTMLSession.close"><a class="viewcode-back" href="../index.html#httpx_html.AsyncHTMLSession.close">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;If a browser was created close it first.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_browser&quot;</span><span class="p">):</span>
-            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="AsyncHTMLSession.run"><a class="viewcode-back" href="../index.html#httpx_html.AsyncHTMLSession.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">coros</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Pass in all the coroutines you want to run, it will wrap each one</span>
-<span class="sd">        in a task, run it and wait for the result. Return a list with all</span>
-<span class="sd">        results, this is returned in the same order coros are passed in.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="n">coro</span><span class="p">())</span> <span class="k">for</span> <span class="n">coro</span> <span class="ow">in</span> <span class="n">coros</span><span class="p">]</span>
-        <span class="n">done</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">tasks</span><span class="p">))</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">done</span><span class="p">]</span></div></div>
 </pre></div>
 
           </div>
@@ -994,25 +840,24 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper"><p class="logo">
-  <a href="../index.html">
-    <img class="logo" src="../_static/requests-html-logo.png" title="https://kennethreitz.org/tattoos"/>
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/logo.png" />
   </a>
 </p>
 
 <p>
-  <iframe src="https://ghbtns.com/github-btn.html?user=psf&repo=requests-html&type=watch&count=true&size=large"
+  <iframe src="https://ghbtns.com/github-btn.html?user=nuno-andre&repo=httpx-html&type=watch&count=false&size=large"
     allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
 
 <p>
-  <strong>Requests-HTML</strong> intends to make parsing HTML (e.g. scraping the web) as
-simple and intuitive as possible.
+  <strong>httpx-html</strong> intends to make scraping the web as simple and intuitive as possible.
 </p>
 
 <h3>Stay Informed</h3>
 <p>Receive updates on new releases and upcoming projects.</p>
 
-<p><iframe src="https://ghbtns.com/github-btn.html?user=psf&type=follow&count=false"
+<p><iframe src="https://ghbtns.com/github-btn.html?user=nuno-andre&type=follow&count=false"
   allowtransparency="true" frameborder="0" scrolling="0" width="200" height="20"></iframe></p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css" />
 <style>
@@ -1031,11 +876,12 @@ simple and intuitive as possible.
 <input id="doc_search" placeholder="Search the doc" autofocus/>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js" onload="docsearch({
   apiKey: '8fcebdef37e2d888d63daf198ccecd08',
-  indexName: 'requests-html',
+  indexName: 'httpx-html',
   inputSelector: '#doc_search',
   debug: false // Set debug to true if you want to inspect the dropdown
 })" async></script>
 
+<!--
 <p><a href="https://twitter.com/kennethreitz" class="twitter-follow-button" data-show-count="false">Follow @kennethreitz</a> <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script></p>
 <p><a href="https://saythanks.io/to/kennethreitz">Say Thanks!</a></p>
 
@@ -1053,11 +899,12 @@ simple and intuitive as possible.
     <li><a href="https://github.com/kennethreitz/records">Records: SQL for Humans</a></li>
     <li><a href="http://www.git-legit.org">Legit: Git for Humans</a></li>
     <li><a href="http://docs.python-tablib.org/en/latest/">Tablib: Tabular Datasets</a></li>
-</ul><div class="relations">
+</ul>
+--><div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">Module code</a><ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
   </ul></li>
   </ul></li>
 </ul>
@@ -1065,7 +912,7 @@ simple and intuitive as possible.
 <div id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
+    <form class="search" action="../../search.html" method="get">
       <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
     </form>
@@ -1101,7 +948,7 @@ simple and intuitive as possible.
 </style>
 
 
-<!-- Analytics tracking for Kenneth. -->
+<!-- Analytics tracking for Kenneth.
 <script type="text/javascript">
   var _gauges = _gauges || [];
   (function() {
@@ -1116,9 +963,7 @@ simple and intuitive as possible.
     s.parentNode.insertBefore(t, s);
   })();
 </script>
-
-
-<!-- That was not a hack. That was art. -->
+-->
         </div>
       </div>
       <div class="clearer"></div>
@@ -1129,7 +974,7 @@ simple and intuitive as possible.
     </div>
 
     
-    <a href="https://github.com/psf/requests-html" class="github">
+    <a href="https://github.com/nuno-andre/httpx-html" class="github">
         <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
     </a>
     
