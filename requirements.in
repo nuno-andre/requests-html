@@ -1,0 +1,8 @@
+beautifulsoup4
+fake-useragent
+httpx>=0.18
+parse
+pyppeteer>=0.0.14
+pyquery
+rfc3986
+w3lib
