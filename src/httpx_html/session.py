@@ -71,8 +71,9 @@ class BaseSession(httpx.Client):
         verify:          bool = True,
         browser_args:    list = ['--no-sandbox'],
         proxies:         Optional[Mapping[str, str]] = None,
+        **kwargs
     ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
 
         # mock a web browser's user agent
         if mock_browser:
