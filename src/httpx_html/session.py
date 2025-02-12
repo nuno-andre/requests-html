@@ -26,7 +26,7 @@ class HTMLResponse(httpx.Response):
         session: "BaseSession",
     ) -> None:
         super().__init__(status_code)
-        self._html = None  # type: Optional[HTML]
+        self._html: HTML | None = None
         self.session = session
 
     @property
@@ -76,6 +76,7 @@ class BaseSession(httpx.Client):
     ) -> None:
         super().__init__(**kwargs)
 
+        self._browser = None
         browser_args = ["--no-sandbox"] if not browser_args else browser_args
         # mock a web browser's user agent
         if mock_browser:
@@ -114,6 +115,9 @@ class HTMLSession(BaseSession):
 
     @property
     def browser(self) -> "pyppeteer.Browser":
+        """
+        Property for `_browser` attribute.
+        """
         if not hasattr(self, "_browser"):
             self.loop = asyncio.get_event_loop()
             if self.loop.is_running():

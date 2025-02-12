@@ -724,7 +724,7 @@ class HTML(BaseParser):
         """
         cookies = [{}] if not cookies else cookies
 
-        self.browser = self.session.browser  # Automatically create an event
+        self._browser = self.session.browser  # Automatically create an event
         # loop and browser
         content = None
 
@@ -786,7 +786,7 @@ class HTML(BaseParser):
         """Async version of render. Takes same parameters."""
         cookies = [{}] if not cookies else cookies
 
-        self.browser = await self.session.browser
+        self._browser = await self.session.browser
         content = None
 
         # automatically set Reload to False, if example URL is being used
